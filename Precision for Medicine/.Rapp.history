@@ -1,0 +1,45 @@
+library(swirl)
+swirl()
+2
+3
+swirl.start()
+play()
+nxt()
+next()
+vrsion()
+library(swiral)
+library(swirl)
+swirl(0)
+4
+1:20
+pi:10
+15:1
+:
+?:
+?':'
+seq(1,20)
+seq(0,10,by=0.5)
+my_seq <- seq(5, 10, length=30)
+length(my_seq)
+1: lenght(myseq)
+1: lenght(my_seq)
+1:lenght(my_seq)
+1:length(my_seq)
+seq(along.with =my_seq)
+se.along()
+seq.along()
+seq_along()
+seq_along(my_seq)
+rep(0, times = 40)
+skip()
+3
+gwtwd()
+getwd()
+ls
+getwd()
+setwd("/Users/ishwar/Desktop/Assignments/Precision for Medicine/")
+require('NanoStringNorm')
+baseline.mRNA <- read.markup.RCC(rcc.path = "case_study_datascientist_data/base_line",rcc.pattern = "*.RCC|*.rcc",exclude = NULL,include = NULL,nprobes = -1)
+baseline.mRNA[baseline.mRNA$Name %in% c('Eef1a1','Gapdh','Hprt1','Ppia','Sdha'),'Code.Class'] <- 'Housekeeping'
+as ‘lib’ is unspecifie
+install.packages('NanoStringNormCNV')

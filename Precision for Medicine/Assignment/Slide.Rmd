@@ -1,0 +1,164 @@
+---
+title: "Precision for Medicine - Assessment"
+author: "Ishwar Pawar"
+date: "10/30/2017"
+email: ishwarpawar21@gmail.com
+contact: (903) 423-2720
+output:
+  slidy_presentation: default
+  ioslides_presentation: default
+---
+
+```{r setup, include=FALSE}
+library(nlme)
+library(NanoStringNorm)
+library(ggplot2)
+library(ggrepel)
+library(gdata)
+
+```
+
+
+## Introduction
+Case Study
+
+Analyzing and studying pharmaceutical company generated gene expression data using the NanoString nCounter assay
+for five subjects across two-time points (i.e. 10 samples total) using R programming. Raw data from these 10 samples in
+NanoString’s Reporter Code Count (RCC) format have been made available along with an annotation file connecting RCC files with subjects and timepoints. Analysis Module was created to help to perform statistically-principled analyses given sample data. It brings together powerful academic open-source analysis tools via a simple interface that guides a user through the analysis to create an interactive HTML document that displays the analytical results. 
+
+Results of an analysis are displayed in two formats:
+
+- An interactive HTML analysis report(Using R Notebook).
+- R code with instructions
+
+## Running R package “NanoStringNorm” in R studio
+
+The workflow to operate the R studio with "NanoStringNorm" package to  NanoString/RCC Analysis is very simple.
+
+- Install and Load required libraries to read RCC files.
+- Set working directory and read annotation file.
+- There are two ways to import RCC files. First using read by directory and second using .xls file. As we don't have .xls file we are going to use the first approach to read the files. That is import RCC files using read.markup.RCC function.
+- display NanoString object using the head command.
+
+
+```{r, echo=FALSE}
+precision_for_medicine_annotation <- read.csv2("case_study_datascientist_data/case_study_annotations.csv",header = TRUE,sep=",")
+baseline <- subset(precision_for_medicine_annotation,visit == "Baseline")
+post_treatment <- subset(precision_for_medicine_annotation, visit =="Post-Treatment")
+baseline.mRNA <- read.markup.RCC(rcc.path = "case_study_datascientist_data/base_line",rcc.pattern = "*.RCC|*.rcc",exclude = NULL,include = NULL,nprobes = -1)
+post_treatment.mRNA <- read.markup.RCC(rcc.path = "case_study_datascientist_data/post_treatment",rcc.pattern = "*.RCC|*.rcc",exclude = NULL,include = NULL,nprobes = -1)
+
+```
+
+
+## Output: Result in NanoString object.
+
+```{r,echo=FALSE}
+head(baseline.mRNA,2)
+head(post_treatment.mRNA,2)
+```
+
+
+## Normalization
+In this case study, we have used 10 NanoString’s Reporter Code Count (RCC) format, that is selected baseline and post-treatment types. However, the stability of any of given gene will vary between datasets. Optimal analysis requires normalization using only the most stable subset of these genes.
+
+The normalization module uses the popular NanoStringNorm to identify an optimal subset of genes. Its return type is either matrix or NanoStringNorm object. Following two optional parameters are used in the NanoStringNorm function. 
+
+- return.matrix.of.endogenous.probes = TRUE: To get result in matrix format.
+- return.matrix.of.endogenous.probes = FALSE: To get result in NanoStringNorm
+
+
+## Output after NanoString object normalization
+```{r,echo=FALSE}
+baseline.mRNA.norm <- NanoStringNorm(
+  x = baseline.mRNA,
+  anno = NA,
+  CodeCount = 'geo.mean',
+  Background = 'mean',
+  SampleContent = 'housekeeping.geo.mean',
+  round.values = TRUE,
+  take.log = TRUE,
+  return.matrix.of.endogenous.probes = TRUE
+)
+
+
+post_treatment.mRNA.norm <- NanoStringNorm(
+  x = post_treatment.mRNA,
+  anno = NA,
+  CodeCount = 'geo.mean',
+  Background = 'mean',
+  SampleContent = 'housekeeping.geo.mean',
+  round.values = TRUE,
+  take.log = TRUE,
+  return.matrix.of.endogenous.probes = TRUE
+)
+```
+
+## Output after NanoString object normalization in matrix format
+
+```{r,echo=FALSE}
+head(baseline.mRNA.norm,2)
+head(post_treatment.mRNA.norm,2)
+```
+
+## Problem 3.1.1 Data Processing: Normalization and Transpose
+
+To process heatmap, we required data in the matrix format. In the Previous process, we normalize data in the matrix format but the data is positive and negative control genes in rows and samples in the column. As per the requirement, we required data in positive and negative control genes in columns and samples in rows. Here we have used Transpose function to get appropriate format. Transpose convert rows to the column.
+
+-ex: t(matrix data)
+
+Consideration: To analyze baseline and post-treatment samples positive and negative control genes are used to assess quality by evaluating signal and noise levels. Data and heatmap is divided into baseline and post-treatment
+
+Secondly, to generate heatmap we are going to use heatmap function. and pass the normalize nanosSting data samples in the matrix format.
+
+## Problem 3.1.2 Output: Heatmap for basline Samples
+```{r,echo=FALSE}
+
+heatmap(t(baseline.mRNA.norm),main = "Heatmap for Basline Samples")
+```
+
+
+## Problem 3.1.2 Output Heatmap for Post-Treatment Samples
+```{r,echo=FALSE}
+heatmap(t(post_treatment.mRNA.norm), main = "Heatmap for Post-Treatment Samples")
+```
+
+
+
+
+##Problem 3.2.1 Differences between the baseline and post-treatment (MCL1 and CXCL1)
+To showing differences between the baseline and post-treatment timepoints for two MCL1 and CXCL1 using boxplots of summary statistics we need to subset CXCL1 and MCL1 values from Baseline/Post-Treatment sample and stored into a seperate data frame. 
+
+After subsetting the data form annotation and nanoSting normalized matrix. we combine the data using rbind () function to get the data in an appropriate format to generate boxplot using ggplot2 package.
+
+
+## Problem 3.2.2 Output: Subset and combine data using r bind function.
+```{r,echo=FALSE}
+data_CXCL1_MCL1 <- rbind(data.frame(sample = baseline$subjectid ,time_point = baseline$visit,CXCL1 = baseline.mRNA.norm["CXCL1",],MCL1 = baseline.mRNA.norm["MCL1",]),data.frame(sample= post_treatment$subjectid,time_point = post_treatment$visit,CXCL1 = post_treatment.mRNA.norm["CXCL1",],MCL1 = post_treatment.mRNA.norm["MCL1",]))
+data_CXCL1_MCL1
+```
+
+## Problem 3.2.3 Output: Generating Box plot using ggplot2 CXCL1 values differnce between Baseline/Post-Treatment sample
+
+```{r,echo=FALSE}
+ggplot(data = data_CXCL1_MCL1, aes(x=sample, y=CXCL1))  + geom_boxplot(aes(fill=time_point),stat = "boxplot") + geom_point(aes(fill=time_point),stat = "identity") + ggrepel::geom_text_repel(aes(label = CXCL1), color = "black", size = 2.5, segment.color = "grey") +  labs (x= "Sample Baseline/Post-Treatment", y = "CXCL1") + ggtitle("CXCL1 values differnce between Baseline/Post-Treatment sample") + theme_bw()
+```
+ 
+ 
+## Problem 3.2.3 Output: Generating Box plot using ggplot2 MCL1 values differnce between Baseline/Post-Treatment sample
+```{r,echo=FALSE}
+ggplot(data = data_CXCL1_MCL1, aes(x=sample, y=MCL1))  + geom_boxplot(aes(fill=time_point),stat = "boxplot") + geom_point(aes(fill=time_point)) + geom_boxplot(aes(fill=time_point),stat = "boxplot") + ggrepel::geom_text_repel(aes(label = CXCL1), color = "black", size = 2.5, segment.color = "grey") + labs (x= "Sample Baseline/Post-Treatment", y = "MCL1") + ggtitle("MCL1 values differnce between Baseline/Post-Treatment sample")
+```
+
+## Problem 3.2.3 Output: Summary table differences between the baseline and post-treatment (MCL1 and CXCL1) 
+
+To generate a table that lists the numeric values of the summary statistics shown in the boxplot. I have used the basic summary function in R.
+
+syntax: summary(data.frame)
+
+```{r,echo=FALSE}
+summary(data_CXCL1_MCL1)
+```
+
+
+## Thank You! 

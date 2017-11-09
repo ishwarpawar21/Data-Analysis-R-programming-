@@ -1,0 +1,82 @@
+#Precision for Medicine - Assessment
+install.packages('NanoStringNorm')
+install.packages('nlme')
+library(nlme)
+library(NanoStringNorm)
+library(ggplot2)
+
+
+
+#Read RCC files 
+#set and read directory as per requirment. 
+setwd("/Users/ishwar/Desktop/Assignments/Precision for Medicine/")
+precision_for_medicine_annotation <- read.csv2("case_study_annotations.csv",header = TRUE,sep=",")
+baseline <- subset(precision_for_medicine_annotation,visit == "Baseline")
+post_treatment <- subset(precision_for_medicine_annotation, visit =="Post-Treatment")
+setwd("/Users/ishwar/Desktop/Assignments/Precision for Medicine/")
+baseline.mRNA <- read.markup.RCC(rcc.path = "case_study_datascientist_data/base_line",rcc.pattern = "*.RCC|*.rcc",exclude = NULL,include = NULL,nprobes = -1)
+post_treatment.mRNA <- read.markup.RCC(rcc.path = "case_study_datascientist_data/post_treatment",rcc.pattern = "*.RCC|*.rcc",exclude = NULL,include = NULL,nprobes = -1)
+
+
+# Normalization
+baseline.mRNA.norm <- NanoStringNorm(
+  x = baseline.mRNA,
+  anno = NA,
+  CodeCount = 'geo.mean',
+  Background = 'mean',
+  SampleContent = 'housekeeping.geo.mean',
+  round.values = TRUE,
+  take.log = TRUE,
+  return.matrix.of.endogenous.probes = TRUE
+)
+
+
+post_treatment.mRNA.norm <- NanoStringNorm(
+  x = post_treatment.mRNA,
+  anno = NA,
+  CodeCount = 'geo.mean',
+  Background = 'mean',
+  SampleContent = 'housekeeping.geo.mean',
+  round.values = TRUE,
+  take.log = TRUE,
+  return.matrix.of.endogenous.probes = TRUE
+)
+
+# Display nanoSting after Normalization
+head(baseline.mRNA.norm,2)
+head(post_treatment.mRNA.norm,2)
+
+
+# Generate Heatmap
+
+heatmap(t(baseline.mRNA.norm),main = "Heatmap for Basline Samples")
+heatmap(t(post_treatment.mRNA.norm), main = "Heatmap for Post-Treatment Samples")
+
+# Subset and combine data using r bind function to generate bar chart
+data_CXCL1_MCL1 <- rbind(data.frame(sample = baseline$subjectid ,time_point = baseline$visit,CXCL1 = baseline.mRNA.norm["CXCL1",],MCL1 = baseline.mRNA.norm["MCL1",]),data.frame(sample= post_treatment$subjectid,time_point = post_treatment$visit,CXCL1 = post_treatment.mRNA.norm["CXCL1",],MCL1 = post_treatment.mRNA.norm["MCL1",]))
+data_CXCL1_MCL1
+
+
+#Generate boxplot 
+
+ggplot(data = data_CXCL1_MCL1, aes(x=sample, y=CXCL1))  + geom_boxplot(aes(fill=time_point),stat = "boxplot") + geom_point(aes(fill=time_point),stat = "identity") + ggrepel::geom_text_repel(aes(label = CXCL1), color = "black", size = 2.5, segment.color = "grey") +  labs (x= "Sample Baseline/Post-Treatment", y = "CXCL1") + ggtitle("CXCL1 values differnce between Baseline/Post-Treatment sample") + theme_bw()
+
+ggplot(data = data_CXCL1_MCL1, aes(x=sample, y=MCL1))  + geom_boxplot(aes(fill=time_point),stat = "boxplot") + geom_point(aes(fill=time_point)) + geom_boxplot(aes(fill=time_point),stat = "boxplot") + ggrepel::geom_text_repel(aes(label = CXCL1), color = "black", size = 2.5, segment.color = "grey") + labs (x= "Sample Baseline/Post-Treatment", y = "MCL1") + ggtitle("MCL1 values differnce between Baseline/Post-Treatment sample")
+
+
+#Generate Bar plot (Optional)
+
+#CXCL1 values differnce between Baseline/Post-Treatment sample 
+data_CXCL1 <- rbind(data.frame(sample = baseline$subjectid ,time_point = baseline$visit,CXCL1 = baseline.mRNA.norm["CXCL1",]),data.frame(sample= post_treatment$subjectid,time_point = post_treatment$visit,CXCL1 = post_treatment.mRNA.norm["CXCL1",]))
+
+ggplot(data_CXCL1, aes(x=sample,y = CXCL1,fill = time_point)) + geom_bar(stat="identity",position=position_dodge(),colour="black") + labs (x= "Sample Baseline/Post-Treatment", y = "CXCL1") + ggtitle("CXCL1 values differnce between Baseline/Post-Treatment sample")
+
+#MCL1 values differnce between Baseline/Post-Treatment sample 
+data_MCL1 <- rbind(data.frame(sample = baseline$subjectid ,time_point = baseline$visit,MCL1 = baseline.mRNA.norm["MCL1",]),data.frame(sample= post_treatment$subjectid,time_point = post_treatment$visit,MCL1 = post_treatment.mRNA.norm["MCL1",]))
+
+ggplot(data_MCL1, aes(x=sample,y = MCL1,fill = time_point)) + geom_bar(stat="identity",position=position_dodge(),colour="black") + labs (x= "Sample Baseline/Post-Treatment", y = "MCL1") + ggtitle("MCL1 values differnce between Baseline/Post-Treatment sample")
+
+
+#Summary 
+summary(data_CXCL1_MCL1)
+

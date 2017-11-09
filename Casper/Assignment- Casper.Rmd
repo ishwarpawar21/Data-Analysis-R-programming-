@@ -1,0 +1,111 @@
+---
+title: "Casper Assignment- R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+Exercise 1: Crunch the data and tell us whether our return rate is trending up or down. Additional insights are welcome, but not required
+
+Step 1: Load required the libraries to perform operations on given data. 
+```{r}
+library(rJava)
+library(xlsxjars)
+library(xlsx)
+library(ggplot2)
+```
+
+
+Step 2: Read the file and print the data in the casper_data variable.
+```{r}
+casper_data <- read.xlsx(file.choose(),sheetIndex = 1, header = TRUE, colIndex = 1:5)
+print(casper_data)
+```
+
+
+
+Step 3: Convert and filter data as per requirment. 
+Step 3.1: Use as.Date( ) function to convert character data to dates 
+```{r}
+casper_data$dateordered <- as.Date(casper_data$dateordered,"%y-%m-%d")
+head(casper_data)
+```
+
+
+
+Step 3.2: Use format function to format date into year and month as we required the data in monthly format
+```{r}
+casper_data$dateordered <- format(casper_data$dateordered,"%Y-%m")
+head(casper_data)
+```
+
+
+
+Step 3.2: Filter/ Subset data as per requirement. As we are going work on only on return data trend. We will filter the data only as per returned order status.
+```{r}
+casper_filter_data <- casper_data[casper_data$orderstatus == "returned",]
+head(casper_filter_data)
+```
+
+
+
+Step 4: Aggregate the return data by month using dcast function 
+```{r}
+casper_trend <- dcast(casper_filter_data,dateordered~orderstatus, length)
+print(casper_trend)
+```
+
+
+
+Step 5: Visualize the data using ggplot, on X-axis is the timeline and on y-axis no of returns in the month.
+```{r}
+ggplot(casper_trend,aes(x=casper_trend$dateordered,y=casper_trend$returned,group =1)) +  geom_line() + geom_point() +
+   xlab("Time Line") + ylab("Total no of returns")
+```
+
+OBSERVATION:
+
+As per above ploted graph we can say that number of returns in September 2016 is drop as comapare to Augest 2016. After September 2016 number of returns increase drastically till December 2016. 
+
+
+
+Additional Observation:
+   
+Step 7: Aggregate the returned/complete data order by month using dcast function
+```{r}
+casper_trend1 <- dcast(setDT(casper_data),dateordered~orderstatus, length)
+head(casper_trend1)
+```
+
+Step 8: Aggregate the returned and complete oreder data by month using dcast function 
+```{r}
+ggplot(casper_trend1, aes(casper_trend1$dateordered,group=1)) + 
+  geom_line(aes(y = casper_trend1$complete, colour = "Order Complete")) + 
+  geom_line(aes(y = casper_trend1$returned, colour = "Order Returend"))+
+   xlab("Time Line") + ylab("Total no of returns/complete")
+```
+
+OBSERVATION:
+
+As per above-plotted graph, we can say that number order completed is fluctuating between 29 to 32 from September 2016 to December 2016 but the returned rate is continuously increasing after October 2016 to December 2016 without increasing order complete. So we can conclude that there is further analysis is required to understand the reason behind the increase in the returned item.
+
+
+Exercise 2: Write the SQL code to produce number of completed orders by date (name of source data table is ‘casper_orders’)
+
+SQL Syntax:
+
+  SELECT
+    SUM(orders) as total_completed_orders
+  FROM casper_orders
+  WHERE orderstatus = "complete"
+  GROUP BY dateorderd
+  ORDER BY dateorderd
+
+
+ 
+
+
+
+
+
+

@@ -1,0 +1,165 @@
+---
+title: "Build model to estimate Y1"
+output:
+  html_document: default
+  TimeWatt: default
+  pdf_document: default
+---
+
+Step 1.1 Prepare Data
+Read data using read.csv2 function. and print using head() command
+Clean the data using parameter na.strings is equal to c("") so that each missing value is coded as a NA. This will help us in the next steps.
+
+```{r}
+datawt <- read.csv2("Modeling_C.csv",sep = ",",header = TRUE,na.strings = c(" "))
+
+datawt$X1 <- as.numeric(datawt$X1)
+datawt$X2 <- as.numeric(datawt$X2)
+datawt$X3 <- as.numeric(datawt$X3)
+datawt$X4 <- as.numeric(datawt$X4)
+
+head(datawt)
+
+
+```
+
+Step 1.2: Check missing value using and range of the values using sapply.
+
+```{r}
+sapply(datawt,function(x) sum(is.na(x)))
+sapply(datawt,function(x) length(unique(x)))
+```
+
+Step 1.3
+A visual take on the missing values might be helpful: the Amelia package has a special plotting function missmap() that will plot your dataset and highlight missing values:
+
+
+```{r}
+library(Amelia)
+library(Rcpp)
+missmap(datawt)
+```
+
+
+Observation: There are no missing values. The data can be used obtain a good fit of the model and better predictive ability.
+
+
+Step 2 Check Class Bias
+Ideally, the proportion of events and non-events in the Y1 variable should approximately be the same. So, lets first check the proportion of classes in the dependent variable Y1.
+
+
+```{r}
+table(datawt$Y1)
+```
+
+Clearly, there is a class bias, a condition observed when the proportion of events is much smaller than the proportion of non-events. So we must sample the observations in approximately equal proportions to get better models.
+
+
+
+Step
+
+Create Training and Test Samples. One way to address the problem of class bias is to draw the 0’s and 1’s for the given sample data in equal proportions. In doing so, we will put rest of the input data not included for training into testData (validation sample). As a result, the size of development sample will be smaller that validation, which is okay, because, there is a large number of observations (>7K).
+
+```{r}
+
+#Create traning data
+datawt_input_1 <-  subset(datawt,datawt$Y1 == 1)  
+datawt_input_0 <- subset(datawt,datawt$Y1 == 0) 
+table(datawt_input_1$Y1)
+table(datawt_input_0$Y1)
+set.seed(100)
+
+datawt_rows_input_1 <- sample(1:nrow(datawt_input_1),round(0.7*nrow(datawt_input_1)))
+datawt_rows_input_0 <- sample(1:nrow(datawt_input_0),round(0.7*nrow(datawt_input_1)))
+
+train_datawt_1 <- datawt_input_1[datawt_rows_input_1,]
+train_datawt_0 <- datawt_input_0[datawt_rows_input_0,]
+
+datawt_sample <- rbind(train_datawt_1,train_datawt_0)
+
+
+#Create Test Data
+test_ones <- datawt_input_1[-datawt_rows_input_1, ]
+test_zeros <- datawt_input_0[-datawt_rows_input_0, ]
+testData <- rbind(test_ones, test_zeros)
+
+
+head(datawt_sample)
+table(datawt_sample$Y1)
+#datawt_train <- sample(1:nrow(datawt),0.7*nrow(datawt))
+#datawt_train <- datawt[datawt_train,]
+
+#datawt_test  <- sample(1:nrow(datawt),0.3*nrow(datawt))
+#datawt_test  <- datawt[datawt_test,] 
+
+```
+
+
+
+Step 4: Build Logit Models
+
+```{r}
+model <- glm(Y1~X1+X2+X3+X4 ,data=datawt_sample,family=binomial(link="logit"))
+summary(model)
+```
+
+Observation: Now we can analyze the fitting and interpret what the model is telling us.
+First of all, we can see that X3 value is greter than significan so X3 not statistically significant. Secondly X1,X3 and X4 have lowest p value suggest there is strong statistically significan.
+
+
+
+
+Step 5: Predict and visualize the test data. 
+
+Receiver Operating Characteristics Curve traces the percentage of true positives accurately predicted by a given logit model as the prediction probability cutoff is lowered from 1 to 0. For a good model, as the cutoff is lowered, it should mark more of actual 1’s as positives and lesser of actual 0’s as 1’s.
+
+```{r}
+# Apply the mode to remaining data 
+predicted <- predict(model, testData, type="response")
+
+library(InformationValue)
+optCutOff <- optimalCutoff(testData$Y1, predicted)[1] 
+
+plotROC(testData$Y1, predicted)
+anova(model, test="Chisq")
+```
+
+
+
+Observation 
+
+The above model has an area under ROC curve 75.01%, which is good.
+
+
+
+Example: Module to get the probability y1 = 1 
+
+Before we noted that the logistic function outputs the probability that Y1 = 1 for a given value of x1, x2,x3,x4. In this example, P(value=1) – the probability that value is 1 – if they had x1, x2, x3, x4 would be equal to:
+
+```{r}
+x1 <- 978					
+x2 <- 1178
+x3 <- 756
+x4 <- 813
+  
+		
+equ = model$coefficients[1] + x1*model$coefficients[2] + x2*model$coefficients[3] + x3*model$coefficients[4] + x4 * model$coefficients[5]
+
+y1 <- exp((equ)) / (1 + exp((equ)))
+
+as.numeric(y1)
+
+```
+
+As per above build model the probabilty to get value of y1 = 1 is 67.27 %,  when x1 <- 978, x2 <- 1178, x3 <- 756, x4 <- 813
+
+********************************************************************************************************************
+To predict pr(1) the following steps are required
+
+Pr(Yes)= 1/1e^-y 
+
+eque_y = 4.562 + (-14.784)X1 + (-17.281)X2 + (-21.598)X3 + (12.373)X4
+
+Pr(1) =  exp(eque_y)/1 + eque_y
+
+

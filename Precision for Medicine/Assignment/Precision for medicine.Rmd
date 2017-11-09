@@ -1,0 +1,188 @@
+---
+title: "Precision for Medicine - Assessment"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+```{r}
+install.packages('NanoStringNorm')
+install.packages('NanoStringNorm')
+install.packages('nlme')
+```
+```{r}
+library(nlme)
+library(NanoStringNorm)
+library(ggplot2)
+
+
+```
+
+
+
+PREPORCESSING DATA
+
+Annotation file is in the .CSV format. distinguish baseline and post-treatment created two separate directories.
+Read annotation file stored into "precision_for_medicine_annotation" data frame. Created two separate data framework for baseline and post-treatment. 
+
+Read baseline and post-treatment RCC files into two different baseline.mRNA and post_treatment.mRNA nanostring variable variable. 
+
+```{r}
+
+precision_for_medicine_annotation <- read.csv2("case_study_datascientist_data/case_study_annotations.csv",header = TRUE,sep=",")
+baseline <- subset(precision_for_medicine_annotation,visit == "Baseline")
+post_treatment <- subset(precision_for_medicine_annotation, visit =="Post-Treatment")
+baseline.mRNA <- read.markup.RCC(rcc.path = "case_study_datascientist_data/base_line",rcc.pattern = "*.RCC|*.rcc",exclude = NULL,include = NULL,nprobes = -1)
+post_treatment.mRNA <- read.markup.RCC(rcc.path = "case_study_datascientist_data/post_treatment",rcc.pattern = "*.RCC|*.rcc",exclude = NULL,include = NULL,nprobes = -1)
+```
+
+
+
+Problem 3.1 (quality control)
+
+Normalize mRNA expression data from the NanoString platform using NanoStringNorm
+Create separate NanoStringNorm object for baseline.mRNA and post_treatment.mRNA nanostring variable variable. Data is in the matrix format to generate heat maps. 
+
+```{r}
+baseline.mRNA.norm <- NanoStringNorm(
+  x = baseline.mRNA,
+  anno = NA,
+  CodeCount = 'geo.mean',
+  Background = 'mean',
+  SampleContent = 'housekeeping.geo.mean',
+  round.values = TRUE,
+  take.log = TRUE,
+  return.matrix.of.endogenous.probes = TRUE
+)
+
+
+post_treatment.mRNA.norm <- NanoStringNorm(
+  x = post_treatment.mRNA,
+  anno = NA,
+  CodeCount = 'geo.mean',
+  Background = 'mean',
+  SampleContent = 'housekeeping.geo.mean',
+  round.values = TRUE,
+  take.log = TRUE,
+  return.matrix.of.endogenous.probes = TRUE
+)
+
+```
+
+
+Heatmap showing positive and negative control genes in columns and samples in rows.
+Here, samples are divided into the baseline and post-treatment to evaluate the signal level and noise level accordingly. 
+we can also use in one heatmap for all samples.
+
+By considering the data required as matrix format to display we have used 'return.matrix.of.endogenous.probes' while normalizing nanoString heat and use Transpose function to get appropriate format.
+
+
+
+```{r}
+heatmap(t(baseline.mRNA.norm),main = "Heatmap for Basline Samples") 
+heatmap(t(post_treatment.mRNA.norm), main = "Heatmap for Post-Treatment Samples")
+```
+
+
+Problem 3.2 (data analysis)
+
+Subset CXCL1 and MCL1 values from Baseline/Post-Treatment sample and stored into the separate data frame. 
+
+```{r}
+ data_CXCL1_MCL1 <- rbind(data.frame(sample = baseline$subjectid ,time_point = baseline$visit,CXCL1 = baseline.mRNA.norm["CXCL1",],MCL1 = baseline.mRNA.norm["MCL1",]),data.frame(sample= post_treatment$subjectid,time_point = post_treatment$visit,CXCL1 = post_treatment.mRNA.norm["CXCL1",],MCL1 = post_treatment.mRNA.norm["MCL1",]))
+data_CXCL1_MCL1
+```
+
+Display difference from Baseline/Post-Treatment sample. (CXCL1 and MCL1 values from Baseline/Post-Treatment sample)
+using BOXPLOT
+
+```{r}
+
+
+
+ggplot(data = data_CXCL1_MCL1, aes(x=sample, y=CXCL1))  + geom_boxplot(aes(fill=time_point),stat = "boxplot") + geom_point(aes(fill=time_point),stat = "identity") + ggrepel::geom_text_repel(aes(label = CXCL1), color = "black", size = 2.5, segment.color = "grey") +  labs (x= "Sample Baseline/Post-Treatment", y = "CXCL1") + ggtitle("CXCL1 values differnce between Baseline/Post-Treatment sample") + theme_bw()
+
+
+
+ 
+ggplot(data = data_CXCL1_MCL1, aes(x=sample, y=MCL1))  + geom_boxplot(aes(fill=time_point),stat = "boxplot") + geom_point(aes(fill=time_point)) + geom_boxplot(aes(fill=time_point),stat = "boxplot") + ggrepel::geom_text_repel(aes(label = CXCL1), color = "black", size = 2.5, segment.color = "grey") + labs (x= "Sample Baseline/Post-Treatment", y = "MCL1") + ggtitle("MCL1 values differnce between Baseline/Post-Treatment sample")
+ 
+```
+
+```{r}
+summary(data_CXCL1_MCL1)
+```
+
+EXTRA/OPTIONAL
+
+Display difference from Baseline/Post-Treatment sample. (CXCL1 and MCL1 values from Baseline/Post-Treatment sample)
+using BAR CHART
+
+```{r}
+
+ #CXCL1 values differnce between Baseline/Post-Treatment sample 
+ data_CXCL1 <- rbind(data.frame(sample = baseline$subjectid ,time_point = baseline$visit,CXCL1 = baseline.mRNA.norm["CXCL1",]),data.frame(sample= post_treatment$subjectid,time_point = post_treatment$visit,CXCL1 = post_treatment.mRNA.norm["CXCL1",]))
+ 
+ggplot(data_CXCL1, aes(x=sample,y = CXCL1,fill = time_point)) + geom_bar(stat="identity",position=position_dodge(),colour="black") + labs (x= "Sample Baseline/Post-Treatment", y = "CXCL1") + ggtitle("CXCL1 values differnce between Baseline/Post-Treatment sample")
+ 
+ #MCL1 values differnce between Baseline/Post-Treatment sample 
+ data_MCL1 <- rbind(data.frame(sample = baseline$subjectid ,time_point = baseline$visit,MCL1 = baseline.mRNA.norm["MCL1",]),data.frame(sample= post_treatment$subjectid,time_point = post_treatment$visit,MCL1 = post_treatment.mRNA.norm["MCL1",]))
+ 
+ggplot(data_MCL1, aes(x=sample,y = MCL1,fill = time_point)) + geom_bar(stat="identity",position=position_dodge(),colour="black") + labs (x= "Sample Baseline/Post-Treatment", y = "MCL1") + ggtitle("MCL1 values differnce between Baseline/Post-Treatment sample")
+ 
+
+
+```
+
+
+
+
+
+
+
+
+Problem 3.3 (reporting)
+
+Normalize mRNA expression data from the NanoString platform using NanoStringNorm.
+
+To get all reports using plot NanoStringNorm function, the data required as the NanoStringNorm format to get all reports. we have used 'return.matrix.of.endogenous.probes' as the FALSE parameter while normalizing nanoString.
+
+```{r}
+baseline.mRNA.normN <- NanoStringNorm(
+  x = baseline.mRNA,
+  anno = NA,
+  CodeCount = 'geo.mean',
+  Background = 'mean',
+  SampleContent = 'housekeeping.geo.mean',
+  round.values = TRUE,
+  take.log = TRUE,
+  return.matrix.of.endogenous.probes = FALSE
+)
+
+
+post_treatment.mRNA.normN <- NanoStringNorm(
+  x = post_treatment.mRNA,
+  anno = NA,
+  CodeCount = 'geo.mean',
+  Background = 'mean',
+  SampleContent = 'housekeeping.geo.mean',
+  round.values = TRUE,
+  take.log = TRUE,
+  return.matrix.of.endogenous.probes = FALSE
+)
+
+```
+
+A brief report with all types:
+Here,
+Used sperate reports for the Baseline Sample Report and Post Treatment Sample Report. We can use the single report as well. I considered the separate report to understand the report correctly.
+
+
+```{r}
+ Plot.NanoStringNorm(x = baseline.mRNA.normN,label.best.guess = TRUE,plot.type = 'all', title = "Bseline Sample Report")
+ Plot.NanoStringNorm(x = post_treatment.mRNA.normN,label.best.guess = TRUE,plot.type = 'all', title = "Post Treatment Sample Report")
+ 
+
+```
+
+Thanks For consideration !!!

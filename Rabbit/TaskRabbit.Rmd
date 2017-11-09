@@ -1,0 +1,286 @@
+---
+title: "R Task Rabbit"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+
+First, read the data from .csv file.
+
+```{r}
+rabbit_data <- read.table("sample.csv", header = TRUE, sep = ",")
+head(rabbit_data)
+```
+
+Following are questions and answers about the data in the CSV sample file:
+
+1. How many recommendation sets are in this data sample?
+```{r}
+length(unique(rabbit_data$recommendation_id))
+```
+Answer : Total no of recommendation sets are 2100 in this data set.
+
+
+
+
+2. Each recommendation set shows from 1 to 15 Taskers, what is:
+
+- average number of Taskers shown
+
+```{r}
+rabbit_data$tasker_id <- as.factor(rabbit_data$tasker_id)
+total_no_shown <- as.numeric(length(rabbit_data$recommendation_id))
+tolal_tasker <- as.numeric(length(unique(rabbit_data$tasker_id)))
+avg_no_tasker <- total_no_shown/tolal_tasker
+avg_no_tasker
+
+```
+      Answer : Average number of Taskers shown 36.14458
+       
+
+- median  number of Taskers shown       
+```{r}
+tasker_data <- table(rabbit_data$tasker_id)
+nrow(tasker_data)
+sort(tasker_data)[416]
+```
+       
+       Answer: - Median  number of Taskers shown is 16
+       count the frequency of the tasker appears as per recommendation set. Arrange the frequency and as the number of observations is 830 then the median number of Taskers shown would be at 416 th position that is 16.  
+
+
+
+
+3. How many total unique Taskers are there in this data sample?
+```{r}
+unique_tsker <- length(unique(rabbit_data$tasker_id))
+unique_tsker
+```
+ Answer: Total unique  830 Taskers are there in this data sample
+
+
+
+
+4. Which Tasker has been shown the most?
+
+```{r}
+tail(names(sort(table(rabbit_data$tasker_id))), 1)
+length(rabbit_data$tasker_id[rabbit_data$tasker_id == "1014508755"])
+#sort(table(rabbit_data$tasker_id[rabbit_data$tasker_id == "1014508755"]))
+```
+Answer: Tasker with "1014508755" appear most with count 608.
+
+
+
+   Which Tasker has been shown the least?
+   
+```{r}
+head(names(sort(table(rabbit_data$tasker_id))), 1)
+length(rabbit_data$tasker_id[rabbit_data$tasker_id == "1006690425"])
+#sort(table(rabbit_data$tasker_id[rabbit_data$tasker_id == "1006690425"]))
+```
+       Answer: Tasker with "1006690425" appear most with count 1.
+
+
+
+
+5. Which Tasker has been hired the most?
+```{r}
+most_hired <- tail(names(sort(table(rabbit_data$tasker_id[rabbit_data$hired == 1]))), 1)
+most_hired
+length(rabbit_data$tasker_id[rabbit_data$hired == 1 & rabbit_data$tasker_id == most_hired])
+
+```
+    Answer: 1012043028 Tasker has been hired the most with count 59
+  
+   Which Tasker has been hired the least?
+   
+```{r}
+least_hired <- head(names(sort(table(rabbit_data$tasker_id[rabbit_data$hired == 1]))), 1)
+least_hired
+length(rabbit_data$tasker_id[rabbit_data$hired == 1 & rabbit_data$tasker_id == least_hired])
+```
+  Answer: 1006720321 Tasker has been hired the least with count 1
+
+
+
+
+
+6. If we define the "Tasker conversion rate" as the number of times a
+   Tasker has been hired, out of the number of times the Tasker has
+   been shown, how many Taskers have a conversion rate of 100%
+   
+   
+```{r}
+get_lenght_hired <- function(id)
+{
+  get_length_hired <- length(rabbit_data$tasker_id[rabbit_data$hired == 1 & rabbit_data$tasker_id == id])
+  if(get_length_hired)
+  {
+    return(get_length_hired)
+  }
+  else
+  {
+    return(0)
+  }
+}
+
+get_lenght_shown<- function(id)
+{
+  get_lenght_shown <- length(rabbit_data$recommendation_id[rabbit_data$tasker_id == id])
+  if(get_lenght_shown)
+  {
+    return(get_lenght_shown)
+  }
+  else
+  {
+    return(0)
+  }
+}
+```
+   
+   
+```{r}
+unique_id <- unique(rabbit_data$tasker_id)
+tasker_id <-NULL
+appear_cnt <-NULL
+hired_cnt <- NULL
+
+for (i in 1:length(unique_id))
+{
+  tasker_id[i] <- unique_id[i]
+  appear_cnt[i] <- get_lenght_shown(unique_id[i])
+  hired_cnt[i] <- get_lenght_hired(unique_id[i])
+}
+
+task_conversion <- data.frame(id = tasker_id,AppearCount = appear_cnt ,HiredCount = hired_cnt)
+length(task_conversion$id[task_conversion$AppearCount == task_conversion$HiredCount])
+task_conversion$id[task_conversion$AppearCount == task_conversion$HiredCount]
+
+```
+
+     Answer: There are 6 Taskers have a conversion rate of 100%
+   
+
+
+7. Would it be possible for all Taskers to have a conversion rate of 100%
+   Please explain your reasoning.
+   
+   Answer: Not possible practically, Only possible if tasker showed once and get hired. and takser only get one chance to get hired and show.
+   
+
+
+
+
+8. For each category, what is the average position of the Tasker who is hired?
+
+```{r}
+
+table(rabbit_data$category[rabbit_data$hired == 1])
+
+```
+   Answer: The above table shows, each category, with an average position of the Tasker who is hired.
+   
+
+
+
+
+9. For each category, what is the average hourly rate and average number of completed tasks for the Taskers who are hired?
+```{r}
+aggregate(cbind(num_completed_tasks,hourly_rate) ~ category, rabbit_data, mean)
+```
+        Answer: The above table shows, average hourly rate and average number of completed tasks for the Taskers who are hired.
+   
+
+
+
+
+
+
+10. Based on the previous, how would you approach the question of:
+
+    How can we use market data to suggest hourly rates to Taskers that would
+    maximize their opportunity to be hired?
+    
+    Please describe in detail, with code and formulas that support your model.
+    
+Answer:  
+      To get suggestions about hourly rates to taskers form the market data. We need to consider only the data set who have hired for the different roles. Secondly, the data is not in the categorical format so we will use the logistic regression model to predict the hourly rates form given data. In this linear regression model hourly rate is dependent variable and need to figure out independent the variable to predict the value.  
+      
+      
+Step 1: Prepare the data for the logistic regression model. 
+Step 1.1: Subset the data with hired tasker. Using subset function. And get the structure of the data using the str function.
+
+```{r}
+data_hired <-  subset(rabbit_data, rabbit_data$hired == 1)
+data_hired$position <- as.factor(data_hired$position) 
+
+str(data_hired)
+```
+
+Step 2: Check Missing value using missmap function
+```{r}
+data_hired <- subset(data_hired,select = c("hourly_rate","position","num_completed_tasks","category"))
+library(Amelia)
+missmap(data_hired)
+```
+
+
+
+Step 3: Find the correlation between dependent and independent variable by visualizing data
+
+```{r}
+plot(data_hired, col="blue", main="Matrix Scatterplot of hourly rate, Position, Number of completed task and category")
+
+plot(data_hired$hourly_rate ~ data_hired$position, col="blue", main="Scatterplot of hourly rate and Number of completed task")
+
+plot(data_hired$hourly_rate ~ data_hired$num_completed_tasks, col="blue", main="Bar char to display relation between the Hourly rate and Position")
+
+plot(data_hired$hourly_rate ~ data_hired$category, col="blue", main="Bar chart to display relation between Hourly Rate and Category")
+
+```
+Form above second graphs we can not conculed the conclued the postion have a positive influence on the hourly rate. In the third graph can see the positive increment in hourly rate as per the frequency of task submissions. and finally category plays a positive influence on hourly rate.
+ 
+  
+  
+  
+Step 4: Create sample data set to bult the model 
+ 
+```{r}
+
+set.seed(100)
+data_rows_sample <- sample(1:nrow(data_hired),round(0.7*nrow(data_hired)))
+data_hired_sample <- data_hired[data_rows_sample,]
+data_hired_test <- data_hired[-data_rows_sample,]
+
+```
+
+
+Step 5: Build linear regression model to predict the hourly rate from the position, category, and a number of completed task. 
+
+```{r}
+model <- lm(hourly_rate~category+position+num_completed_tasks,data_hired_sample)
+summary(model)
+```
+
+Step 6: Analysis
+
+The output shows the F-statistic: 23.05 (p-value: < 2.2e-16) clearly shows reject the null hypothesis that the variables category, position, num_completed_tasks,  collectively have no effect on hourly_rate. In addition, the output also shows that R squre is  0.4269. Here our main goal is not to produce precise predictions.So it would be not get problem having low r squre. 
+
+Example:
+
+Visulise and Apply above model on test data  
+```{r}
+
+
+plot(model)
+suggest_hourly_rates <- predict.lm(model,data_hired_test)
+
+#class(data_hired_test)
+```
+
+
+The above liner regression model we can use for suggest hourly rates to Taskers that would maximize their opportunity to be hired.  
+
+
